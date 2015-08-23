@@ -1,0 +1,124 @@
+---
+title: "Practical Machine Learning Project"
+author: "Erik Ryding"
+date: "Sunday, August 23, 2015"
+---
+
+###Assignment###
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. 
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+#####predict the class of each of the 20 rows of the test set consisting of 160 variables#####
+
+
+###Executive Summary###
+The Random Forest algorithm was chosen to predict the test set.
+This proved to be very efficient with an **accuracy of 99,25%**.
+The estimate for the **Out of Sample Error (1 - testing accuracy)is: 0.75%** 
+
+###Setup Libraries###
+
+```{r, echo=TRUE}
+library(caret)
+library(randomForest)
+```
+
+###Set the Seed to make the test reproducible###
+
+```{r, echo=TRUE}
+set.seed(12345)
+```
+
+###Load Training data set###
+```{r, echo=TRUE}
+trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+write.csv(training, file = "training.csv")
+```
+
+###Load Testing data set### 
+```{r, echo=TRUE}
+testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+write.csv(testing, file = "testing.csv")
+```
+
+###Partition training into a training and a testing set  (60% / 40%)###
+```{r, echo=TRUE}
+inTrain <- createDataPartition(y=training$classe, p=0.60, list=FALSE)
+trainingSet <- training[inTrain,]
+testingSet  <- training[-inTrain,]
+```
+###Verify contents###
+```{r, echo=TRUE}
+dim(trainingSet); dim(testingSet)
+dim(testing)
+```
+
+###Reduce the amount of predictors###
+
+####Remove Near Zero Variance variables from Training Set####
+```{r, echo=TRUE}
+ if (length(nearZeroVar(trainingSet)) > 0) {
+       trainingSet <- trainingSet[, -nearZeroVar(trainingSet)]
+     }
+```
+####Verify contents####
+```{r, echo=TRUE}
+  dim(trainingSet)
+```
+####Remove NA columns####
+```{r, echo=TRUE}
+trainingSet <- trainingSet[,colSums(is.na(trainingSet)) == 0]
+```
+
+####Verify contents####
+```{r, echo=TRUE}
+dim(trainingSet)
+```
+
+####Remove columns which are irrelevant: user id, names, timestamps and row counters####
+```{r, echo=TRUE}
+remCols = c('X', 'user_name', 'raw_timestamp_part_1',
+                           'raw_timestamp_part_2','cvtd_timestamp',
+                            'new_window', 'num_window')
+trainingSet <- trainingSet[, -which(names(trainingSet) %in% remCols)]
+```
+####Verify contents####
+```{r, echo=TRUE}
+dim(trainingSet)
+```
+####Remove highly correlated predictors (columns: 10  1  9  8 18 31 33) ####
+```{r, echo=TRUE}
+remCols <- findCorrelation(cor(trainingSet[,-53]), cutoff = .90, verbose = TRUE)
+```
+```{r, echo=TRUE}
+trainingSet <- trainingSet[,-remCols]
+dim(trainingSet)
+```
+###Random Forest execution###
+```{r, echo=TRUE}
+newControl <- trainControl(method="cv", number=4)
+modelFit <- train(classe~ .,data=trainingSet, method="rf",trControl=newControl)
+
+confusionMatrix(testingSet$classe,predict(modelFit,testingSet))
+```
+
+###Prediction###
+We now predict the outcome of the testing data set containing the 20 rows.
+```{r, echo=TRUE}
+modelPredict <- predict(modelFit,testing)
+modelPredict
+```
+
+###Out of Sample Error calculation###
+```{r, echo=TRUE}
+prediction <- predict(modelFit,testingSet)
+oseAccuracy <-  sum(prediction == testingSet$classe)/length(prediction)
+oseError <- (1-oseAccuracy)*100
+oseError
+paste0("Out of sample error estimation: ", round(oseError, digits = 2), "%")
+```
