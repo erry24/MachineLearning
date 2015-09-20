@@ -1,7 +1,7 @@
 ---
 title: "Practical Machine Learning Project"
 author: "Erik Ryding"
-date: "Sunday, August 23, 2015"
+date: "Sunday, September 20, 2015"
 ---
 
 ###Assignment###
@@ -11,13 +11,22 @@ One thing that people regularly do is quantify how much of a particular activity
 
 More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
 
-#####predict the class of each of the 20 rows of the test set consisting of 160 variables#####
+**Predict the class of each of the 20 rows of the test set consisting of 160 variables**
 
 
 ###Executive Summary###
-The Random Forest algorithm was chosen to predict the test set.
+The goal was to predict the variable **classe**, representing 5 categories. 
+In the training set the number of predictors was reduced from 160 to 46.
+
+The Random Forest algorithm using the Caret library was chosen to predict the test set.
+For the sample, **Cross Validation with 4 folds** was applied with the following parameters: 
+
+trainControl(method="cv", number=4)
+
 This proved to be very efficient with an **accuracy of 99,25%**.
 The estimate for the **Out of Sample Error (1 - testing accuracy)is: 0.75%** 
+
+This proved sufficient enough to predict the **20 tests with 100% accuracy**.
 
 ###Setup Libraries###
 
@@ -100,6 +109,8 @@ trainingSet <- trainingSet[,-remCols]
 dim(trainingSet)
 ```
 ###Random Forest execution###
+Cross Validation with 4 folds is applied.
+
 ```{r, echo=TRUE}
 newControl <- trainControl(method="cv", number=4)
 modelFit <- train(classe~ .,data=trainingSet, method="rf",trControl=newControl)
